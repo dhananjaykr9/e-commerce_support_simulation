@@ -1,6 +1,6 @@
 # E-Commerce Order & Inventory Support Simulation (Pure SQL)
 
-A lightweight SQL project framed around resolving **10 production support tickets** on an e-commerce database.
+A simple, lightweight SQL project resolving **10 production support tickets** on an e-commerce database.
 
 ---
 
@@ -9,9 +9,9 @@ A lightweight SQL project framed around resolving **10 production support ticket
 ```
 e-commerce_support_simulation/
 ├── schema.sql                     # 5 normalized tables with PKs, FKs, & constraints
-├── seed_data.sql                  # ~1,500 rows of realistic messy data
+├── seed_data.sql                  # ~550 rows of realistic messy data
 ├── support_tickets_resolution.sql # Pure SQL resolving 10 support tickets
-├── run_simulation.py              # Lightweight 1-click test runner (standard library only)
+├── run_simulation.py              # Simple 1-click test runner (built-in sqlite3)
 └── README.md                      # Documentation & resume guide
 ```
 
@@ -30,23 +30,21 @@ erDiagram
 
     CUSTOMERS {
         int customer_id PK
-        string first_name
-        string last_name
+        string name
         string email
         string status
     }
     PRODUCTS {
         int product_id PK
         string sku UK
-        string product_name
-        decimal unit_price
+        string name
+        decimal price
         int stock_quantity
-        int reorder_level
     }
     ORDERS {
         int order_id PK
         int customer_id FK
-        timestamp order_date
+        date order_date
         string status
         decimal total_amount
     }
@@ -56,31 +54,31 @@ erDiagram
         int product_id FK
         int quantity
         decimal unit_price
-        decimal subtotal
     }
     PAYMENTS {
         int payment_id PK
         int order_id FK
-        timestamp payment_date
+        date payment_date
         decimal amount
+        string payment_method
         string payment_status
     }
 ```
 
 ---
 
-## 🎫 10 Production Support Tickets
+## 🎫 10 Support Tickets Resolved
 
-1. **Deduplicate Customers**: Reassigns orders to primary customer accounts and removes duplicates inside a `BEGIN ... COMMIT` transaction.
-2. **Reconcile Stuck Orders**: Advances orders with successful payment (`'PAID'`) from `'PENDING'` to `'PROCESSING'`.
+1. **Deduplicate Customers**: Merges orders from duplicate accounts to primary accounts and deletes duplicates in a transaction.
+2. **Reconcile Stuck Orders**: Advances paid orders from `'PENDING'` to `'PROCESSING'`.
 3. **Daily Health Reports**: Aggregates daily payment failure rates and low-stock products.
 4. **Slow Query Tuning**: Adds composite index on `(customer_id, order_date DESC)` and verifies plan improvement via `EXPLAIN`.
-5. **Clean Orphan Records**: Reassigns orphan orders to a system archive user and deletes unlinked items.
-6. **Order Total Discrepancy**: Re-syncs header `total_amount` with line item sums where frontend rounding failed.
-7. **Oversold FIFO Queue**: Uses window functions to prioritize pending orders chronologically for zero-stock products.
+5. **Clean Orphan Records**: Deletes orders, order items, and payments referencing non-existent parent records.
+6. **Order Total Discrepancy**: Re-syncs header `total_amount` with line item sums (`quantity * unit_price`).
+7. **Oversold Stock Tracking**: Detects orders placed for products with `stock_quantity = 0`.
 8. **Refund Double Charges**: Detects multiple `'PAID'` entries for the same order and marks duplicate charges as `'REFUNDED'`.
-9. **Cancel Stale Orders**: Cancels abandoned orders older than 48 hours to release inventory reservations.
-10. **Customer Lifetime Tiers**: Creates view `vw_customer_tiers` classifying customers into Platinum, Gold, Silver, and Bronze tiers.
+9. **Cancel Stale Orders**: Cancels abandoned orders in `'PENDING'` status that have no payment.
+10. **Customer Lifetime Tiers**: Creates view `vw_customer_tiers` classifying customers into `VIP` and `STANDARD` tiers.
 
 ---
 
@@ -92,23 +90,32 @@ python run_simulation.py
 
 Output:
 ```text
-1. Loading schema.sql...
-2. Loading seed_data.sql...
-3. Executing support_tickets_resolution.sql...
+1. Running schema.sql...
+2. Running seed_data.sql...
+3. Running support_tickets_resolution.sql...
 
 --- RESULTS VERIFICATION ---
 Ticket 1  (Deduplicate Customers):       0 duplicates remaining [PASS]
 Ticket 2  (Reconcile Stuck Orders):      0 stuck orders remaining [PASS]
-Ticket 3  (Alert Reports):               19 failure dates reported [PASS]
-Ticket 4  (Index Optimization):          SEARCH orders USING INDEX idx_orders_customer_date [PASS]
+Ticket 3  (Alert Reports):               24 failure dates reported [PASS]
+Ticket 4  (Index Optimization):          SEARCH orders USING INDEX idx_orders_customer [PASS]
 Ticket 5  (Clean Orphan Records):        0 unlinked orders remaining [PASS]
 Ticket 6  (Fix Order Discrepancies):     0 discrepant orders remaining [PASS]
-Ticket 7  (Oversold FIFO Queue):         6 out-of-stock items prioritized [PASS]
+Ticket 7  (Oversold Stock Tracking):     3 out-of-stock items tracked [PASS]
 Ticket 8  (Refund Double Charges):       0 duplicate charges remaining [PASS]
 Ticket 9  (Cancel Stale Orders):         0 stale orders remaining [PASS]
-Ticket 10 (Customer Lifetime Tiers):     14 Platinum customers identified [PASS]
+Ticket 10 (Customer Lifetime Tiers):     12 VIP customers identified [PASS]
 
 All 10 production tickets executed and verified successfully.
 ```
 
 ---
+
+## 💼 How to Write It on Your Resume
+
+```markdown
+**Retail Order & Inventory Database Support Simulation** | *PostgreSQL, SQL, Relational Modeling*
+- Designed a normalized 5-table relational schema enforcing referential integrity and constraints (PK, FK, CHECK, NOT NULL) to prevent invalid order states.
+- Wrote transactional SQL cleanup scripts (BEGIN / COMMIT / ROLLBACK) to resolve simulated L2 production support tickets, including duplicate customer accounts, stuck payment states, and orphan records.
+- Reduced query execution time on order-lookup reports by creating targeted composite indexes verified via EXPLAIN query execution plans.
+```
