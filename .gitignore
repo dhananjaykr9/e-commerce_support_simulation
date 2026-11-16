@@ -1,0 +1,14 @@
+# Database files generated at runtime
+*.db
+*.sqlite
+*.sqlite3
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
